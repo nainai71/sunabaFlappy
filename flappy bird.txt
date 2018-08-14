@@ -1,0 +1,324 @@
+memory[55001] -> 1
+
+#--------- 以下の数値で難易度調節 --------------
+const SQUARE_SIZE -> 8
+const PIPE_SPEED -> 9 #1の位は小数
+const PIPE_HOLE -> 2 #パイプの穴の数
+const PIPE_BOXES -> 8 #画面に表示されるパイプブロックの数（SQUARE_SIZEによって変える）
+const GRAVITY -> 6 #1, 10の位は小数
+const FLY -> 130 #1, 10の位は小数(どれだけ飛ぶか)
+
+#↑デフォルトは上から
+# SQUARE_SIZE -> 8
+# PIPE_SPEED -> 8
+# PIPE_HOLE -> 2
+# PIPE_BOXES -> 8
+# GRAVITY -> 6
+# FLY -> 145
+
+
+#-------------- color -------------------
+const green -> 228822
+const yellow -> 888822
+const blue -> 113399
+const white -> 999999
+const black -> 000000
+
+
+#------------------------ Main ---------------------------
+random_number -> 0
+score -> 0
+end -> 1
+
+#-----------initialize----------------------
+#---- bird status (1, 10の桁は小数として扱う) --------
+birdAy -> GRAVITY
+birdVy -> 0
+birdY -> 0
+
+#----- pipe status （画面上に最大2つのパイプが表示されるので2個用意） ------
+pipeX1 -> 990 #1の位は小数（パイプの位置）
+pipeX2 -> 990
+i1 -> random(random_number) #パイプのどこに穴を開けるか
+i2 -> random(random_number)
+
+#------ others --------
+space_before -> 0
+scoreFlag -> 0
+
+refresh_screen(black)
+show_score(score)
+
+
+while 1
+  memory[55000] -> 1
+  if end = 1
+    #-----------initialize----------------------
+    #---- bird status (1, 10の桁は小数として扱う) --------
+    birdAy -> GRAVITY
+    birdVy -> 0
+    birdY -> 0
+
+    #----- pipe status （画面上に最大2つのパイプが表示されるので2個用意） ------
+    pipeX1 -> 990 #1の位は小数（パイプの位置）
+    pipeX2 -> 990
+    i1 -> random(random_number) #パイプのどこに穴を開けるか
+    i2 -> random(random_number)
+
+    #------ others --------
+    space_before -> 0
+    scoreFlag -> 0
+
+    refresh_screen(black)
+    show_score(score)
+
+
+
+  #------- press enter ---------
+  if memory[50009] = 1
+    random_number -> random_number + random_number
+    score -> 0
+    end -> 0
+
+  #--------- ゲームループスタート ------------
+  if (end = 0)
+    space -> memory[50008]
+    refresh_screen(blue)
+
+    #-------- パイプの動き ----------
+    if pipeX1 < 150
+      pipeX1 -> 990
+      i1 -> random(random_number)
+    if pipeX2 < -350 #画面から消す（一時的）
+      pipeX2 -> pipeX1
+      i2 -> i1
+      scoreFlag -> 0
+
+    pipeX1 -> pipeX1 - PIPE_SPEED
+    pipeX2 -> pipeX2 - PIPE_SPEED
+    pipe(pipeX1/10, i1)
+    pipe(pipeX2/10, i2)
+
+    #----------- スペースを押したとき -----------
+    if (space_before = 0) * (space = 1)
+      birdVy -> -FLY
+      random_number -> random_number + random_number
+
+    #---------- トリの物理処理（自由落下） ------------
+    birdVy -> birdVy + birdAy
+    birdY -> birdY + birdVy
+    bird(birdY/100)
+
+    #----------- それぞれの位置（score, end処理用） -------------
+    pipeLeft -> pipeX2/10
+    pipeRight -> (pipeX2/10) + SQUARE_SIZE
+    pipeBottom -> (i2 * (SQUARE_SIZE + 2)) - 1
+    pipeTop -> ((i2 + PIPE_HOLE) * (SQUARE_SIZE + 2)) + 1
+    birdLeft -> 15
+    birdRight -> 15 + SQUARE_SIZE
+    birdTop -> birdY/100
+    birdBottom -> (birdY/100) + SQUARE_SIZE
+
+    #---------- 点数 -----------------
+    if (pipeRight < birdRight) * (scoreFlag = 0)
+      score -> score + 1
+      scoreFlag -> 1
+    show_score(score)
+
+    #------ ゲームオーバー処理 -----------
+    if ((birdY/100) + SQUARE_SIZE > 100)
+      end -> 1
+    if (pipeLeft < birdRight) * (birdLeft < pipeRight)
+      if (pipeTop < birdBottom) + (birdTop < pipeBottom)
+        end -> 1
+
+    space_before -> space
+    random_number -> random_number + 1
+    if random_number > 10000
+      random_number -> random_number - 10000
+
+
+  random_number -> random_number + 1
+  if random_number > 10000
+    random_number -> random_number - 10000
+
+#------------ def -----------------------------------------
+def dot(x, y, color)
+	memory[60000 + x + (y * 100)] -> color
+
+def dot_white(x, y)
+  dot(x, y, 999999)
+
+def sq(x, y, color)
+  b -> 0
+  while b < SQUARE_SIZE
+    a -> 0
+    while a < SQUARE_SIZE
+      if (x+a >= 0) * (x+a < 100) * (y+b >= 0) * (y+b < 100)
+        dot(x + a, y + b, color)
+      a -> a + 1
+    b -> b + 1
+
+def bird(y)
+  sq(15, y, yellow)
+
+#PIPE_HOLEに合わせて穴の数を変えたい
+#def pipe(x, i)
+#  a -> 0
+#  b -> PIPE_HOLE - 2
+#  y -> 0
+#  while a < (PIPE_BOXES + PIPE_HOLE)
+#    y -> y + 1
+#    sq(x, y, green)
+#    if (i+b = a)
+#      sq(x, y, blue)
+#    y -> y + SQUARE_SIZE + 1
+#    a -> a + 1
+#    b -> b - 1
+
+def pipe(x, i)
+  a -> 0
+  y -> 0
+  while a < 10
+    y -> y + 1
+    if (i != a) * (i+1 != a)
+      sq(x, y, green)
+    y -> y + SQUARE_SIZE + 1
+    a -> a + 1
+
+def refresh_screen(color)
+  b -> 0
+  while b < 100
+    a -> 0
+    while a < 100
+      dot(a, b, color)
+      a -> a + 1
+    b -> b + 1
+
+def random(number) #1〜(PIPE_BOXES-1)までの数字をランダムで返す（random_numberと一緒に使う）
+  a -> number / (PIPE_BOXES-1)
+  out -> (1 + (number - ((PIPE_BOXES-1) * a)))
+
+def show_score(no)
+  if no > 99 #最高得点
+    no -> 99
+  tens -> no / 10 #十の位
+  ones -> no - (tens * 10) #一の位
+  number(5, 5, tens)
+  number(10, 5, ones)
+
+def number(x, y, num) #ドット数字
+  if num = 0
+    dot_white(x, y)
+    dot_white(x+1, y)
+    dot_white(x+2, y)
+    dot_white(x, y+1)
+    dot_white(x+2, y+1)
+    dot_white(x, y+2)
+    dot_white(x+2, y+2)
+    dot_white(x, y+3)
+    dot_white(x+2, y+3)
+    dot_white(x, y+4)
+    dot_white(x+1, y+4)
+    dot_white(x+2, y+4)
+  if num = 1
+    dot_white(x+2, y)
+    dot_white(x+2, y+1)
+    dot_white(x+2, y+2)
+    dot_white(x+2, y+3)
+    dot_white(x+2, y+4)
+  if num = 2
+    dot_white(x, y)
+    dot_white(x+1, y)
+    dot_white(x+2, y)
+    dot_white(x+2, y+1)
+    dot_white(x, y+2)
+    dot_white(x+2, y+2)
+    dot_white(x+1, y+2)
+    dot_white(x, y+3)
+    dot_white(x, y+4)
+    dot_white(x+1, y+4)
+    dot_white(x+2, y+4)
+  if num = 3
+    dot_white(x, y)
+    dot_white(x+1, y)
+    dot_white(x+2, y)
+    dot_white(x+2, y+1)
+    dot_white(x, y+2)
+    dot_white(x+1, y+2)
+    dot_white(x+2, y+2)
+    dot_white(x+2, y+3)
+    dot_white(x, y+4)
+    dot_white(x+1, y+4)
+    dot_white(x+2, y+4)
+  if num = 4
+    dot_white(x, y)
+    dot_white(x+2, y)
+    dot_white(x, y+1)
+    dot_white(x+2, y+1)
+    dot_white(x, y+2)
+    dot_white(x+1, y+2)
+    dot_white(x+2, y+2)
+    dot_white(x+2, y+3)
+    dot_white(x+2, y+4)
+  if num = 5
+    dot_white(x, y)
+    dot_white(x+1, y)
+    dot_white(x+2, y)
+    dot_white(x, y+1)
+    dot_white(x, y+2)
+    dot_white(x+2, y+2)
+    dot_white(x+1, y+2)
+    dot_white(x+2, y+3)
+    dot_white(x, y+4)
+    dot_white(x+1, y+4)
+    dot_white(x+2, y+4)
+  if num = 6
+    dot_white(x, y)
+    dot_white(x+1, y)
+    dot_white(x+2, y)
+    dot_white(x, y+1)
+    dot_white(x+2, y+2)
+    dot_white(x, y+2)
+    dot_white(x+1, y+2)
+    dot_white(x, y+3)
+    dot_white(x+2, y+3)
+    dot_white(x, y+4)
+    dot_white(x+1, y+4)
+    dot_white(x+2, y+4)
+  if num = 7
+    dot_white(x, y)
+    dot_white(x+2, y)
+    dot_white(x, y+1)
+    dot_white(x+2, y+1)
+    dot_white(x+1, y)
+    dot_white(x+2, y+2)
+    dot_white(x+2, y+3)
+    dot_white(x+2, y+4)
+  if num = 8
+    dot_white(x, y)
+    dot_white(x+1, y)
+    dot_white(x+2, y)
+    dot_white(x, y+1)
+    dot_white(x+2, y+1)
+    dot_white(x, y+2)
+    dot_white(x+2, y+2)
+    dot_white(x+1, y+2)
+    dot_white(x, y+3)
+    dot_white(x+2, y+3)
+    dot_white(x, y+4)
+    dot_white(x+1, y+4)
+    dot_white(x+2, y+4)
+  if num = 9
+    dot_white(x, y)
+    dot_white(x+1, y)
+    dot_white(x+2, y)
+    dot_white(x, y+1)
+    dot_white(x+2, y+1)
+    dot_white(x, y+2)
+    dot_white(x+2, y+2)
+    dot_white(x+1, y+2)
+    dot_white(x+2, y+3)
+    dot_white(x, y+4)
+    dot_white(x+1, y+4)
+    dot_white(x+2, y+4)
