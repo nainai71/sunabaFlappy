@@ -162,19 +162,6 @@ def sq(x, y, color)
 def bird(y)
   sq(15, y, yellow)
 
-#PIPE_HOLEに合わせて穴の数を変えたい
-#def pipe(x, i)
-#  a -> 0
-#  b -> PIPE_HOLE - 2
-#  y -> 0
-#  while a < (PIPE_BOXES + PIPE_HOLE)
-#    y -> y + 1
-#    sq(x, y, green)
-#    if (i+b = a)
-#      sq(x, y, blue)
-#    y -> y + SQUARE_SIZE + 1
-#    a -> a + 1
-#    b -> b - 1
 
 def pipe(x, i)
   a -> 0
